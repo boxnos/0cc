@@ -20,4 +20,9 @@ try() {
 try 0 0
 try 42 42
 
+try 4 1+3
+try 255 2-3
+try 21 '5+20-4'
+#try hoge 2*3
+
 echo OK
