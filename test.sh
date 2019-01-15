@@ -23,6 +23,9 @@ try 42 42
 try 4 1+3
 try 255 2-3
 try 21 '5+20-4'
-#try hoge 2*3
+
+try 21 '5 + 20 - 4'
+# try 41 " 12 + + 34 - 5 "
+# try hoge 2*3
 
 echo OK
