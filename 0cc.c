@@ -2,7 +2,7 @@
 #include <stdlib.h>
 #include <ctype.h>
 
-enum { TK_NUM, TK_EOF };
+enum { ND_NUM, TK_NUM, TK_EOF };
 
 typedef struct {
     int type;
@@ -12,6 +12,119 @@ typedef struct {
 
 Token tokens[100];
 
+void error(int i, char *s) {
+    fprintf(stderr, "ERROR: expected %s, but got %s\n", s, tokens[i].input);
+    exit(1);
+}
+
+typedef struct Node {
+    int type;
+    struct Node *lhs;
+    struct Node *rhs;
+    int value;
+} Node;
+
+Node *new_node(int type, Node *lhs, Node *rhs) {
+    Node *n = malloc(sizeof(Node));
+    n->type = type;
+    n->lhs = lhs;
+    n->rhs = rhs;
+    return n;
+}
+
+Node *new_number(int value) {
+    Node *n = malloc(sizeof(Node));
+    n->type = ND_NUM;
+    n->value = value;
+    return n;
+}
+
+int consume(int type, int *pos) {
+    if (tokens[*pos].type != type)
+        return 0;
+    (*pos)++;
+    return 1;
+}
+
+Node *add(int *);
+
+Node *term(int *pos) {
+    if (consume('(', pos)) {
+        Node *n = add(pos);
+        if (!consume(')', pos))
+            error(*pos, ")");
+        return n;
+    }
+    if (tokens[*pos].type == TK_NUM)
+        return new_number(tokens[(*pos)++].value);
+    error(*pos, "Term");
+}
+
+Node *mul(int *pos) {
+    Node *n = term(pos);
+    for (;;) {
+        if (consume('*', pos))
+            n = new_node('*', n, term(pos));
+        else if (consume('/', pos))
+            n = new_node('/', n, term(pos));
+        else
+            return n;
+    }
+}
+
+Node *add(int *pos) {
+    Node *n = mul(pos);
+    for (;;) {
+        if (consume('+', pos))
+            n = new_node('+', n, mul(pos));
+        else if (consume('-', pos))
+            n = new_node('-', n, mul(pos));
+        else
+            return n;
+    }
+}
+
+void display(Node *n) {
+    if (n->type == ND_NUM)
+        fprintf(stderr, "%d", n->value);
+    else {
+        fprintf(stderr, "(%c ", n->type);
+        display(n->lhs);
+        fprintf(stderr, " ");
+        display(n->rhs);
+        fprintf(stderr, ")");
+    }
+}
+
+void gen(Node *n) {
+    if (n->type == ND_NUM) {
+        printf("\tpush %d\n", n->value);
+        return;
+    }
+    gen(n->lhs);
+    gen(n->rhs);
+
+    printf("\tpop rdi\n");
+    printf("\tpop rax\n");
+
+    switch (n->type) {
+    case '+' :
+        printf("\tadd rax, rdi\n");
+        break;
+    case '-' :
+        printf("\tsub rax, rdi\n");
+        break;
+    case '*' :
+        printf("\tmul rdi\n");
+        break;
+    case '/' :
+        printf("\tmov rdx, 0\n");
+        printf("\tdiv rdi\n");
+        break;
+    }
+    printf("\tpush rax\n");
+}
+
 void tokenize(char *p) {
     int i = 0;
     while (*p) {
@@ -20,7 +133,7 @@ void tokenize(char *p) {
             continue;
         }
 
-        if (*p == '+' || *p == '-') {
+        if (*p == '+' || *p == '-' || *p == '*' || *p == '/' || *p == '(' || *p == ')') {
             tokens[i].type = *p;
             tokens[i].input = p;
             i++;
@@ -41,10 +154,6 @@ void tokenize(char *p) {
     tokens[i].input = p;
 }
 
-void error(int i, char *s) {
-    fprintf(stderr, "ERROR: expected %s, but got %s\n", s, tokens[i].input);
-    exit(1);
-}
 
 int main(int argc, char **argv) {
     if (argc != 2) {
@@ -54,53 +163,17 @@ int main(int argc, char **argv) {
 
     tokenize(argv[1]);
 
+    int pos = 0;
+    Node *n = add(&pos);
+//    display(n);
+//    fprintf(stderr, "\n");
+
     printf(".intel_syntax noprefix\n");
     printf(".global main\n");
     printf("main:\n");
 
-    if (tokens[0].type != TK_NUM)
-        error(0, "number");
-    printf("\tmov rax, %d\n", tokens[0].value);
-    
-    int i = 1;
-    while (tokens[i].type != TK_EOF) {
-        if (tokens[i].type == '+') {
-            i++;
-            if (tokens[i].type != TK_NUM)
-                error(i, "number");
-            printf("\tadd rax, %d\n", tokens[i].value);
-            i++;
-            continue;
-        }
-        if (tokens[i].type == '-') {
-            i++;
-            if (tokens[i].type != TK_NUM)
-                error(i, "number");
-            printf("\tsub rax, %d\n", tokens[i].value);
-            i++;
-            continue;
-        }
-        fprintf(stderr, "main : error unexpexted input.\n");
-        exit(1);
-    }
-
-    /*
-    while (*p) {
-        if (*p == '+') {
-            p++;
-            printf("\tadd rax, %ld\n", strtol(p, &p, 10));
-            continue;
-        }
-        if (*p == '-') {
-            p++;
-            printf("\tsub rax, %ld\n", strtol(p, &p, 10));
-            continue;
-        }
-        fprintf(stderr, "ERROR: expected '+' , '-', but got '%c'\n", *p);
-        return 1;
-    }
-    */
-
+    gen(n);
+    printf("\tpop rax\n");
     printf("\tret\n");
 
     return 0;
