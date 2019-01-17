@@ -5,10 +5,9 @@ default : 0cc vector_test
 	./vector_test
 	./test.sh
 
-0cc : 0cc.c
+0cc : 0cc.o vector.o
 
 vector_test : vector_test.o vector.o
-	gcc -o $@ $^
 
 clean :
 	rm -f tmp tmp.s 0cc *.o

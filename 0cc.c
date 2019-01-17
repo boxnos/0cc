@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <ctype.h>
+#include "vector.h"
 
 enum { ND_NUM, TK_NUM, TK_EOF };
 
@@ -10,10 +11,23 @@ typedef struct {
     char *input;
 } Token;
 
-Token tokens[100];
+Token *new_token(int type, int value, char *input) {
+    Token *t = malloc(sizeof (Token));
+    t->type = type;
+    t->value = value;
+    t->input = input;
+    return t;
+}
+
+//Token tokens[100];
+vector *tokens;
+
+Token *get_token(int i) {
+    return (Token *) tokens->data[i];
+}
 
 void error(int i, char *s) {
-    fprintf(stderr, "ERROR: expected %s, but got %s\n", s, tokens[i].input);
+    fprintf(stderr, "ERROR: expected %s, but got %s\n", s, get_token(i)->input);
     exit(1);
 }
 
@@ -40,7 +54,7 @@ Node *new_number(int value) {
 }
 
 int consume(int type, int *pos) {
-    if (tokens[*pos].type != type)
+    if (get_token(*pos)->type != type)
         return 0;
     (*pos)++;
     return 1;
@@ -55,8 +69,8 @@ Node *term(int *pos) {
             error(*pos, ")");
         return n;
     }
-    if (tokens[*pos].type == TK_NUM)
-        return new_number(tokens[(*pos)++].value);
+    if (get_token(*pos)->type == TK_NUM)
+        return new_number(get_token((*pos)++)->value);
     error(*pos, "Term");
 }
 
@@ -126,7 +140,6 @@ void gen(Node *n) {
 }
 
 void tokenize(char *p) {
-    int i = 0;
     while (*p) {
         if (isspace(*p)) {
             p++;
@@ -134,26 +147,21 @@ void tokenize(char *p) {
         }
 
         if (*p == '+' || *p == '-' || *p == '*' || *p == '/' || *p == '(' || *p == ')') {
-            tokens[i].type = *p;
-            tokens[i].input = p;
-            i++;
+            vector_push(tokens, (void *) new_token(*p, 0, p));
             p++;
             continue;
         }
         if (isdigit(*p)) {
-            tokens[i].type = TK_NUM;
-            tokens[i].value = strtol(p, &p, 10);
-            tokens[i].input = p;
-            i++;
+            int value = strtol(p, &p, 10);
+            vector_push(tokens, (void *) new_token(TK_NUM, value, p));
             continue;
         }
+
         fprintf(stderr, "tokenize : error unexpexted input.\n");
         exit(1);
     }
-    tokens[i].type = TK_EOF;
-    tokens[i].input = p;
+    vector_push(tokens, (void *) new_token(TK_EOF, 0, p));
 }
-
 
 int main(int argc, char **argv) {
     if (argc != 2) {
@@ -161,6 +169,7 @@ int main(int argc, char **argv) {
         return 1;
     }
 
+    tokens = new_vector();
     tokenize(argv[1]);
 
     int pos = 0;
