@@ -19,15 +19,19 @@ Token *new_token(int type, int value, char *input) {
     return t;
 }
 
-//Token tokens[100];
 vector *tokens;
 
 Token *get_token(int i) {
     return (Token *) tokens->data[i];
 }
 
-void error(int i, char *s) {
+void dump(int i, char *s) {
     fprintf(stderr, "ERROR: expected %s, but got %s\n", s, get_token(i)->input);
+    exit(1);
+}
+
+void error(char *s) {
+    fprintf(stderr, "%s\n");
     exit(1);
 }
 
@@ -66,12 +70,12 @@ Node *term(int *pos) {
     if (consume('(', pos)) {
         Node *n = add(pos);
         if (!consume(')', pos))
-            error(*pos, ")");
+            dump(*pos, ")");
         return n;
     }
     if (get_token(*pos)->type == TK_NUM)
         return new_number(get_token((*pos)++)->value);
-    error(*pos, "Term");
+    dump(*pos, "Term");
 }
 
 Node *mul(int *pos) {
@@ -118,22 +122,22 @@ void gen(Node *n) {
     gen(n->lhs);
     gen(n->rhs);
 
-    printf("\tpop rdi\n");
-    printf("\tpop rax\n");
+    puts("\tpop rdi");
+    puts("\tpop rax");
 
     switch (n->type) {
     case '+' :
-        printf("\tadd rax, rdi\n");
+        puts("\tadd rax, rdi");
         break;
     case '-' :
-        printf("\tsub rax, rdi\n");
+        puts("\tsub rax, rdi");
         break;
     case '*' :
-        printf("\tmul rdi\n");
+        puts("\tmul rdi");
         break;
     case '/' :
-        printf("\tmov rdx, 0\n");
-        printf("\tdiv rdi\n");
+        puts("\tmov rdx, 0");
+        puts("\tdiv rdi");
         break;
     }
     printf("\tpush rax\n");
@@ -157,17 +161,14 @@ void tokenize(char *p) {
             continue;
         }
 
-        fprintf(stderr, "tokenize : error unexpexted input.\n");
-        exit(1);
+        error("tokenize : error unexpexted input.");
     }
     vector_push(tokens, (void *) new_token(TK_EOF, 0, p));
 }
 
 int main(int argc, char **argv) {
-    if (argc != 2) {
-        fprintf(stderr, "ERROR: wrong arguments.");
-        return 1;
-    }
+    if (argc != 2)
+        error("arg : wrong arguments.");
 
     tokens = new_vector();
     tokenize(argv[1]);
@@ -177,13 +178,13 @@ int main(int argc, char **argv) {
 //    display(n);
 //    fprintf(stderr, "\n");
 
-    printf(".intel_syntax noprefix\n");
-    printf(".global main\n");
-    printf("main:\n");
+    puts(".intel_syntax noprefix");
+    puts(".global main");
+    puts("main:");
 
     gen(n);
-    printf("\tpop rax\n");
-    printf("\tret\n");
+    puts("\tpop rax");
+    puts("\tret");
 
     return 0;
 }
