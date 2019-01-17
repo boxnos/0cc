@@ -1,2 +1,4 @@
 0cc
+vector_test
 tmp*
+*.o
