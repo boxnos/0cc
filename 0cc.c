@@ -3,7 +3,7 @@
 #include <ctype.h>
 #include "vector.h"
 
-enum { ND_NUM, TK_NUM, TK_EOF };
+enum { ND_NUM, ND_IDENT, TK_NUM, TK_IDENT, TK_EOF };
 
 typedef struct {
     int type;
@@ -57,6 +57,13 @@ Node *new_number(int value) {
     return n;
 }
 
+Node *new_ident(int value) {
+    Node *n = malloc(sizeof(Node));
+    n->type = ND_IDENT;
+    n->value = value;
+    return n;
+}
+
 int consume(int type, int *pos) {
     if (get_token(*pos)->type != type)
         return 0;
@@ -73,6 +80,8 @@ Node *term(int *pos) {
             dump(*pos, ")");
         return n;
     }
+    if (get_token(*pos)->type == TK_IDENT)
+        return new_ident(get_token((*pos)++)->value);
     if (get_token(*pos)->type == TK_NUM)
         return new_number(get_token((*pos)++)->value);
     dump(*pos, "Term");
@@ -102,9 +111,18 @@ Node *add(int *pos) {
     }
 }
 
+Node *assign(int *pos) {
+    Node *n = add(pos);
+    if (consume('=', pos))
+        return new_node('=', n, assign(pos));
+    return n;
+}
+
 void display(Node *n) {
     if (n->type == ND_NUM)
         fprintf(stderr, "%d", n->value);
+    else if (n->type == ND_IDENT)
+        fprintf(stderr, "%c", n->value);
     else {
         fprintf(stderr, "(%c ", n->type);
         display(n->lhs);
@@ -118,6 +136,9 @@ void gen(Node *n) {
     if (n->type == ND_NUM) {
         printf("\tpush %d\n", n->value);
         return;
+    }
+    if (n->type == ND_IDENT) {
+        exit(1);
     }
     gen(n->lhs);
     gen(n->rhs);
@@ -150,8 +171,13 @@ void tokenize(char *p) {
             continue;
         }
 
-        if (*p == '+' || *p == '-' || *p == '*' || *p == '/' || *p == '(' || *p == ')') {
+        if (*p == '+' || *p == '-' || *p == '*' || *p == '/' || *p == '(' || *p == ')' || *p == '=') {
             vector_push(tokens, (void *) new_token(*p, 0, p));
+            p++;
+            continue;
+        }
+        if (islower(*p)) {
+            vector_push(tokens, (void *) new_token(TK_IDENT, *p, p));
             p++;
             continue;
         }
@@ -174,9 +200,9 @@ int main(int argc, char **argv) {
     tokenize(argv[1]);
 
     int pos = 0;
-    Node *n = add(&pos);
-//    display(n);
-//    fprintf(stderr, "\n");
+    Node *n = assign(&pos);
+    display(n);
+    fprintf(stderr, "\n");
 
     puts(".intel_syntax noprefix");
     puts(".global main");
