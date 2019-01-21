@@ -5,12 +5,12 @@ try() {
   input="$2"
 
   ./0cc "$input" > tmp.s
-  if [ "$?" != 0 ]; then
+  if [ $? -ne 0 ]; then
     echo "0cc error : $input"
     exit 1
   fi
   gcc -o tmp tmp.s
-  if [ "$?" != 0 ]; then
+  if [ $? -ne 0 ]; then
     echo "compile error : $input"
     nl -w2 tmp.s
     exit 1
