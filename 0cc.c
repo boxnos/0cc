@@ -118,17 +118,41 @@ Node *assign(int *pos) {
     return n;
 }
 
-void display(Node *n) {
+Node *statement(int *pos) {
+    Node *n = assign(pos);
+    if (!consume(';', pos))
+        dump(*pos, ";");
+    return n;
+}
+
+Node *code[100];
+
+void program() {
+    int i = 0;
+    int p = 0;
+    while (get_token(p)->type != TK_EOF)
+        code[i++] = statement(&p);
+    code[i] = NULL;
+}
+
+void display_node(Node *n) {
     if (n->type == ND_NUM)
         fprintf(stderr, "%d", n->value);
     else if (n->type == ND_IDENT)
         fprintf(stderr, "%c", n->value);
     else {
         fprintf(stderr, "(%c ", n->type);
-        display(n->lhs);
+        display_node(n->lhs);
         fprintf(stderr, " ");
-        display(n->rhs);
+        display_node(n->rhs);
         fprintf(stderr, ")");
+    }
+}
+
+void display() {
+    for (int i = 0; code[i] != NULL; i++) {
+        display_node(code[i]);
+        fprintf(stderr, "\n");
     }
 }
 
@@ -171,7 +195,8 @@ void tokenize(char *p) {
             continue;
         }
 
-        if (*p == '+' || *p == '-' || *p == '*' || *p == '/' || *p == '(' || *p == ')' || *p == '=') {
+        if (*p == '+' || *p == '-' || *p == '*' || *p == '/' ||
+            *p == '(' || *p == ')' || *p == '=' || *p == ';') {
             vector_push(tokens, (void *) new_token(*p, 0, p));
             p++;
             continue;
@@ -199,17 +224,18 @@ int main(int argc, char **argv) {
     tokens = new_vector();
     tokenize(argv[1]);
 
-    int pos = 0;
-    Node *n = assign(&pos);
-    display(n);
-    fprintf(stderr, "\n");
+    program();
+    display();
 
     puts(".intel_syntax noprefix");
     puts(".global main");
     puts("main:");
 
-    gen(n);
-    puts("\tpop rax");
+    for (int i = 0; code[i] != NULL; i++) {
+        gen(code[i]);
+        puts("\tpop rax");
+    }
+
     puts("\tret");
 
     return 0;
