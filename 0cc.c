@@ -156,38 +156,6 @@ void display() {
     }
 }
 
-void gen(Node *n) {
-    if (n->type == ND_NUM) {
-        printf("\tpush %d\n", n->value);
-        return;
-    }
-    if (n->type == ND_IDENT) {
-        exit(1);
-    }
-    gen(n->lhs);
-    gen(n->rhs);
-
-    puts("\tpop rdi");
-    puts("\tpop rax");
-
-    switch (n->type) {
-    case '+' :
-        puts("\tadd rax, rdi");
-        break;
-    case '-' :
-        puts("\tsub rax, rdi");
-        break;
-    case '*' :
-        puts("\tmul rdi");
-        break;
-    case '/' :
-        puts("\tmov rdx, 0");
-        puts("\tdiv rdi");
-        break;
-    }
-    printf("\tpush rax\n");
-}
-
 void tokenize(char *p) {
     while (*p) {
         if (isspace(*p)) {
@@ -217,6 +185,60 @@ void tokenize(char *p) {
     vector_push(tokens, (void *) new_token(TK_EOF, 0, p));
 }
 
+void gen_lvalue(Node *node) {
+    if (node->type != ND_IDENT)
+        error("syntax error : expected lvalue.");
+    puts("\tmov rax, rbp");
+    printf("\tsub rax, %d\n", 'z' - node->value + 1 * 8);
+    puts("\tpush rax");
+}
+
+void gen(Node *n) {
+    if (n->type == ND_NUM) {
+        printf("\tpush %d\n", n->value);
+        return;
+    }
+    if (n->type == ND_IDENT) {
+        gen_lvalue(n);
+        puts("\tpop rax");
+        puts("\tmov rax, [rax]");
+        puts("\tpush rax");
+        return;
+    }
+    if (n->type == '=') {
+        gen_lvalue(n->lhs);
+        gen(n->rhs);
+        puts("\tpop rdi");
+        puts("\tpop rax");
+        puts("\tmov [rax], rdi");
+        puts("\tpush rdi");
+        return;
+    }
+
+    gen(n->lhs);
+    gen(n->rhs);
+
+    puts("\tpop rdi");
+    puts("\tpop rax");
+
+    switch (n->type) {
+    case '+' :
+        puts("\tadd rax, rdi");
+        break;
+    case '-' :
+        puts("\tsub rax, rdi");
+        break;
+    case '*' :
+        puts("\tmul rdi");
+        break;
+    case '/' :
+        puts("\tmov rdx, 0");
+        puts("\tdiv rdi");
+        break;
+    }
+    printf("\tpush rax\n");
+}
+
 int main(int argc, char **argv) {
     if (argc != 2)
         error("arg : wrong arguments.");
@@ -231,11 +253,17 @@ int main(int argc, char **argv) {
     puts(".global main");
     puts("main:");
 
+    puts("\tpush rbp");
+    puts("\tmov rbp, rsp");
+    puts("\tsub rsp, 208");
+
     for (int i = 0; code[i] != NULL; i++) {
         gen(code[i]);
         puts("\tpop rax");
     }
 
+    puts("\tmov rsp, rbp");
+    puts("\tpop rbp");
     puts("\tret");
 
     return 0;

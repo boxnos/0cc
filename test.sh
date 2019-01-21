@@ -19,7 +19,8 @@ try() {
   actual="$?"
 
   if [ "$actual" = "$expected" ]; then
-    echo "$input => $actual"
+    echo "$input
+=> $actual"
   else
     echo "$expected expected, but got $actual"
     nl -w2 tmp.s
@@ -38,7 +39,8 @@ try 21 "5 + 20 - 4;"
 try 38 "1 * 3 + 5 * 7;"
 try 56 "1 * (3 + 5) * 7;"
 try 1 "3 / 2; 2 - 1;"
-try 4 "a = b = 3;"
+try 6 "a = z = 3 * 2;"
+try 7 "a = 2; b = 1; a * 3 + b;"
 # try 41 " 12 + + 34 - 5 "
 # try hoge 2*3
 
