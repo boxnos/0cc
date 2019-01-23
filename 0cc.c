@@ -189,11 +189,12 @@ void gen_lvalue(Node *node) {
     if (node->type != ND_IDENT)
         error("syntax error : expected lvalue.");
     puts("\tmov rax, rbp");
-    printf("\tsub rax, %d\n", 'z' - node->value + 1 * 8);
+    printf("\tsub rax, %d\n", ('z' - node->value + 1) * 8);
     puts("\tpush rax");
 }
 
 void gen(Node *n) {
+    puts("");
     if (n->type == ND_NUM) {
         printf("\tpush %d\n", n->value);
         return;
@@ -259,6 +260,7 @@ int main(int argc, char **argv) {
 
     for (int i = 0; code[i] != NULL; i++) {
         gen(code[i]);
+        puts("");
         puts("\tpop rax");
     }
 
