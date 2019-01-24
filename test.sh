@@ -41,6 +41,7 @@ try 56 "1 * (3 + 5) * 7;"
 try 1 "3 / 2; 2 - 1;"
 try 6 "a = z = 3 * 2;"
 try 7 "c = 2; b = 1; c * 3 + b;"
+try 7 "foo = 2; bar = 1; foo * 3 + bar;"
 # try 41 " 12 + + 34 - 5 "
 # try hoge 2*3
 

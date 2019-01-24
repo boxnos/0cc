@@ -7,22 +7,24 @@ enum { ND_NUM, ND_IDENT, TK_NUM, TK_IDENT, TK_EOF };
 
 typedef struct {
     int type;
-    int value;
     char *input;
-} Token;
+    union {
+        int value;
+        vector *string;
+    };
+} token;
 
-Token *new_token(int type, int value, char *input) {
-    Token *t = malloc(sizeof (Token));
+token *new_token(int type, char *input) {
+    token *t = malloc(sizeof (token));
     t->type = type;
-    t->value = value;
     t->input = input;
     return t;
 }
 
 vector *tokens;
 
-Token *get_token(int i) {
-    return (Token *) tokens->data[i];
+token *get_token(int i) {
+    return (token *) tokens->data[i];
 }
 
 void dump(int i, char *s) {
@@ -39,7 +41,10 @@ typedef struct Node {
     int type;
     struct Node *lhs;
     struct Node *rhs;
-    int value;
+    union {
+        int value;
+        vector *string;
+    };
 } Node;
 
 Node *new_node(int type, Node *lhs, Node *rhs) {
@@ -57,10 +62,10 @@ Node *new_number(int value) {
     return n;
 }
 
-Node *new_ident(int value) {
+Node *new_ident(vector *string) {
     Node *n = malloc(sizeof(Node));
     n->type = ND_IDENT;
-    n->value = value;
+    n->string = string;
     return n;
 }
 
@@ -81,7 +86,7 @@ Node *term(int *pos) {
         return n;
     }
     if (get_token(*pos)->type == TK_IDENT)
-        return new_ident(get_token((*pos)++)->value);
+        return new_ident(get_token((*pos)++)->string);
     if (get_token(*pos)->type == TK_NUM)
         return new_number(get_token((*pos)++)->value);
     dump(*pos, "Term");
@@ -138,9 +143,10 @@ void program() {
 void display_node(Node *n) {
     if (n->type == ND_NUM)
         fprintf(stderr, "%d", n->value);
-    else if (n->type == ND_IDENT)
-        fprintf(stderr, "%c", n->value);
-    else {
+    else if (n->type == ND_IDENT) {
+        for (void **i = n->string->data; *i != NULL; i++)
+            fprintf(stderr, "%c", *i);
+    } else {
         fprintf(stderr, "(%c ", n->type);
         display_node(n->lhs);
         fprintf(stderr, " ");
@@ -165,31 +171,39 @@ void tokenize(char *p) {
 
         if (*p == '+' || *p == '-' || *p == '*' || *p == '/' ||
             *p == '(' || *p == ')' || *p == '=' || *p == ';') {
-            vector_push(tokens, (void *) new_token(*p, 0, p));
+            vector_push(tokens, (void *) new_token(*p, p));
             p++;
             continue;
         }
         if (islower(*p)) {
-            vector_push(tokens, (void *) new_token(TK_IDENT, *p, p));
-            p++;
+            vector *s = new_vector();
+            do {
+                vector_push(s, (void *) (long) *p++);
+            } while (islower(*p));
+            vector_push(s, (long) '\0');
+            token *t = new_token(TK_IDENT, p);
+            t->string = s;
+            vector_push(tokens, (void *) t);
             continue;
         }
         if (isdigit(*p)) {
             int value = strtol(p, &p, 10);
-            vector_push(tokens, (void *) new_token(TK_NUM, value, p));
+            token *t = new_token(TK_NUM, p);
+            t->value = value;
+            vector_push(tokens, (void *) t);
             continue;
         }
 
         error("tokenize : error unexpexted input.");
     }
-    vector_push(tokens, (void *) new_token(TK_EOF, 0, p));
+    vector_push(tokens, (void *) new_token(TK_EOF, p));
 }
 
 void gen_lvalue(Node *node) {
     if (node->type != ND_IDENT)
         error("syntax error : expected lvalue.");
     puts("\tmov rax, rbp");
-    printf("\tsub rax, %d\n", ('z' - node->value + 1) * 8);
+    printf("\tsub rax, %d\n", ('z' - (long) node->string->data[0] + 1) * 8);
     puts("\tpush rax");
 }
 
