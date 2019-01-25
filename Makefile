@@ -6,7 +6,7 @@ default : 0cc vector_test map_test
 	./map_test
 	./test.sh
 
-0cc : 0cc.o vector.o
+0cc : 0cc.o map.o vector.o
 
 vector_test : vector_test.o vector.o expect.o
 

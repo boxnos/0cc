@@ -1,7 +1,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <ctype.h>
-#include "vector.h"
+#include <string.h>
+#include "map.h"
 
 enum { ND_NUM, ND_IDENT, TK_NUM, TK_IDENT, TK_EOF };
 
@@ -10,7 +11,7 @@ typedef struct {
     char *input;
     union {
         int value;
-        vector *string;
+        char *string;
     };
 } token;
 
@@ -37,13 +38,15 @@ void error(char *s) {
     exit(1);
 }
 
+map *env;
+
 typedef struct Node {
     int type;
     struct Node *lhs;
     struct Node *rhs;
     union {
         int value;
-        vector *string;
+        char *string;
     };
 } Node;
 
@@ -62,7 +65,7 @@ Node *new_number(int value) {
     return n;
 }
 
-Node *new_ident(vector *string) {
+Node *new_ident(char *string) {
     Node *n = malloc(sizeof(Node));
     n->type = ND_IDENT;
     n->string = string;
@@ -118,8 +121,10 @@ Node *add(int *pos) {
 
 Node *assign(int *pos) {
     Node *n = add(pos);
-    if (consume('=', pos))
+    if (consume('=', pos)) {
+        map_put(env, n->string, (void *) (long) env->keys->size);
         return new_node('=', n, assign(pos));
+    }
     return n;
 }
 
@@ -144,8 +149,7 @@ void display_node(Node *n) {
     if (n->type == ND_NUM)
         fprintf(stderr, "%d", n->value);
     else if (n->type == ND_IDENT) {
-        for (void **i = n->string->data; *i != NULL; i++)
-            fprintf(stderr, "%c", *i);
+        fprintf(stderr, "%s", n->string);
     } else {
         fprintf(stderr, "(%c ", n->type);
         display_node(n->lhs);
@@ -176,12 +180,15 @@ void tokenize(char *p) {
             continue;
         }
         if (islower(*p)) {
-            vector *s = new_vector();
+            char tmp[256];
+            int i = 0;
             do {
-                vector_push(s, (void *) (long) *p++);
+                tmp[i++] = *p++;
             } while (islower(*p));
-            vector_push(s, (long) '\0');
+            tmp[i] = '\0';
             token *t = new_token(TK_IDENT, p);
+            char *s = malloc(sizeof (char) * i);
+            strcpy(s, tmp);
             t->string = s;
             vector_push(tokens, (void *) t);
             continue;
@@ -203,7 +210,8 @@ void gen_lvalue(Node *node) {
     if (node->type != ND_IDENT)
         error("syntax error : expected lvalue.");
     puts("\tmov rax, rbp");
-    printf("\tsub rax, %d\n", ('z' - (long) node->string->data[0] + 1) * 8);
+    int i = (long) map_get(env, node->string);
+    printf("\tsub rax, %d\n", i * 8);
     puts("\tpush rax");
 }
 
@@ -259,6 +267,7 @@ int main(int argc, char **argv) {
         error("arg : wrong arguments.");
 
     tokens = new_vector();
+    env = new_map();
     tokenize(argv[1]);
 
     program();
@@ -270,7 +279,7 @@ int main(int argc, char **argv) {
 
     puts("\tpush rbp");
     puts("\tmov rbp, rsp");
-    puts("\tsub rsp, 208");
+    printf("\tsub rsp, %d\n", env->keys->size * 8);
 
     for (int i = 0; code[i] != NULL; i++) {
         gen(code[i]);
