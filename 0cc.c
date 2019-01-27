@@ -40,33 +40,33 @@ void error(char *s) {
 
 map *env;
 
-typedef struct Node {
+typedef struct node {
     int type;
-    struct Node *lhs;
-    struct Node *rhs;
+    struct node *lhs;
+    struct node *rhs;
     union {
         int value;
         char *string;
     };
-} Node;
+} node;
 
-Node *new_node(int type, Node *lhs, Node *rhs) {
-    Node *n = malloc(sizeof(Node));
+node *new_node(int type, node *lhs, node *rhs) {
+    node *n = malloc(sizeof(node));
     n->type = type;
     n->lhs = lhs;
     n->rhs = rhs;
     return n;
 }
 
-Node *new_number(int value) {
-    Node *n = malloc(sizeof(Node));
+node *new_number(int value) {
+    node *n = malloc(sizeof(node));
     n->type = ND_NUM;
     n->value = value;
     return n;
 }
 
-Node *new_ident(char *string) {
-    Node *n = malloc(sizeof(Node));
+node *new_ident(char *string) {
+    node *n = malloc(sizeof(node));
     n->type = ND_IDENT;
     n->string = string;
     return n;
@@ -79,11 +79,11 @@ int consume(int type, int *pos) {
     return 1;
 }
 
-Node *add(int *);
+node *add(int *);
 
-Node *term(int *pos) {
+node *term(int *pos) {
     if (consume('(', pos)) {
-        Node *n = add(pos);
+        node *n = add(pos);
         if (!consume(')', pos))
             dump(*pos, ")");
         return n;
@@ -95,8 +95,8 @@ Node *term(int *pos) {
     dump(*pos, "Term");
 }
 
-Node *mul(int *pos) {
-    Node *n = term(pos);
+node *mul(int *pos) {
+    node *n = term(pos);
     for (;;) {
         if (consume('*', pos))
             n = new_node('*', n, term(pos));
@@ -107,8 +107,8 @@ Node *mul(int *pos) {
     }
 }
 
-Node *add(int *pos) {
-    Node *n = mul(pos);
+node *add(int *pos) {
+    node *n = mul(pos);
     for (;;) {
         if (consume('+', pos))
             n = new_node('+', n, mul(pos));
@@ -119,8 +119,8 @@ Node *add(int *pos) {
     }
 }
 
-Node *assign(int *pos) {
-    Node *n = add(pos);
+node *assign(int *pos) {
+    node *n = add(pos);
     if (consume('=', pos)) {
         map_put(env, n->string, (void *) (long) env->keys->size);
         return new_node('=', n, assign(pos));
@@ -128,14 +128,14 @@ Node *assign(int *pos) {
     return n;
 }
 
-Node *statement(int *pos) {
-    Node *n = assign(pos);
+node *statement(int *pos) {
+    node *n = assign(pos);
     if (!consume(';', pos))
         dump(*pos, ";");
     return n;
 }
 
-Node *code[100];
+node *code[100];
 
 void program() {
     int i = 0;
@@ -145,7 +145,7 @@ void program() {
     code[i] = NULL;
 }
 
-void display_node(Node *n) {
+void display_node(node *n) {
     if (n->type == ND_NUM)
         fprintf(stderr, "%d", n->value);
     else if (n->type == ND_IDENT) {
@@ -206,7 +206,7 @@ void tokenize(char *p) {
     vector_push(tokens, (void *) new_token(TK_EOF, p));
 }
 
-void gen_lvalue(Node *node) {
+void gen_lvalue(node *node) {
     if (node->type != ND_IDENT)
         error("syntax error : expected lvalue.");
     puts("\tmov rax, rbp");
@@ -215,7 +215,7 @@ void gen_lvalue(Node *node) {
     puts("\tpush rax");
 }
 
-void gen(Node *n) {
+void gen(node *n) {
     puts("");
     if (n->type == ND_NUM) {
         printf("\tpush %d\n", n->value);
