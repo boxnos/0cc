@@ -2,40 +2,13 @@
 #include <stdlib.h>
 #include <ctype.h>
 #include <string.h>
-#include "map.h"
+#include "utility.h"
+#include "token.h"
 
-enum { ND_NUM, ND_IDENT, TK_NUM, TK_IDENT, TK_EOF };
-
-typedef struct {
-    int type;
-    char *input;
-    union {
-        int value;
-        char *string;
-    };
-} token;
-
-token *new_token(int type, char *input) {
-    token *t = malloc(sizeof (token));
-    t->type = type;
-    t->input = input;
-    return t;
-}
-
-vector *tokens;
+enum {ND_NUM, ND_IDENT};
 
 token *get_token(int i) {
     return (token *) tokens->data[i];
-}
-
-void dump(int i, char *s) {
-    fprintf(stderr, "ERROR: expected %s, but got %s\n", s, get_token(i)->input);
-    exit(1);
-}
-
-void error(char *s) {
-    fprintf(stderr, "%s\n");
-    exit(1);
 }
 
 map *env;
@@ -85,14 +58,15 @@ node *term(int *pos) {
     if (consume('(', pos)) {
         node *n = add(pos);
         if (!consume(')', pos))
-            dump(*pos, ")");
+            dump(")", get_token(*pos)->input);
         return n;
     }
     if (get_token(*pos)->type == TK_IDENT)
         return new_ident(get_token((*pos)++)->string);
     if (get_token(*pos)->type == TK_NUM)
         return new_number(get_token((*pos)++)->value);
-    dump(*pos, "Term");
+    dump("Term", get_token(*pos)->input);
+    return NULL;
 }
 
 node *mul(int *pos) {
@@ -131,7 +105,7 @@ node *assign(int *pos) {
 node *statement(int *pos) {
     node *n = assign(pos);
     if (!consume(';', pos))
-        dump(*pos, ";");
+        dump(";", get_token(*pos)->input);
     return n;
 }
 
@@ -164,46 +138,6 @@ void display() {
         display_node(code[i]);
         fprintf(stderr, "\n");
     }
-}
-
-void tokenize(char *p) {
-    while (*p) {
-        if (isspace(*p)) {
-            p++;
-            continue;
-        }
-
-        if (*p == '+' || *p == '-' || *p == '*' || *p == '/' ||
-            *p == '(' || *p == ')' || *p == '=' || *p == ';') {
-            vector_push(tokens, (void *) new_token(*p, p));
-            p++;
-            continue;
-        }
-        if (islower(*p)) {
-            char tmp[256];
-            int i = 0;
-            do {
-                tmp[i++] = *p++;
-            } while (islower(*p));
-            tmp[i] = '\0';
-            token *t = new_token(TK_IDENT, p);
-            char *s = malloc(sizeof (char) * i);
-            strcpy(s, tmp);
-            t->string = s;
-            vector_push(tokens, (void *) t);
-            continue;
-        }
-        if (isdigit(*p)) {
-            int value = strtol(p, &p, 10);
-            token *t = new_token(TK_NUM, p);
-            t->value = value;
-            vector_push(tokens, (void *) t);
-            continue;
-        }
-
-        error("tokenize : error unexpexted input.");
-    }
-    vector_push(tokens, (void *) new_token(TK_EOF, p));
 }
 
 void gen_lvalue(node *node) {
@@ -271,7 +205,7 @@ int main(int argc, char **argv) {
     tokenize(argv[1]);
 
     program();
-    display();
+    //display();
 
     puts(".intel_syntax noprefix");
     puts(".global main");
