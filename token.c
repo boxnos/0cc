@@ -1,7 +1,9 @@
 #include <stdlib.h>
 #include <ctype.h>
 #include <string.h>
+#include "map.h"
 #include "token.h"
+#include "utility.h"
 
 token *new_token(int type, char *input) {
     token *t = malloc(sizeof (token));

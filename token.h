@@ -1,5 +1,3 @@
-#include "map.h"
-
 enum {TK_NUM, TK_IDENT, TK_EOF};
 
 typedef struct {
