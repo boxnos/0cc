@@ -14,3 +14,4 @@ map *env;
 node *code[100];
 
 void program();
+void display();
