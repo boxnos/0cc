@@ -6,78 +6,77 @@
 void gen_lvalue(node *node) {
     if (node->type != ND_IDENT)
         error("syntax error : expected lvalue.");
-    puts("\tmov rax, rbp");
+    puts("\tmovq %rbp, %rax");
     int i = (long) map_get(env, node->string);
-    printf("\tsub rax, %d\n", i * 8);
-    puts("\tpush rax");
+    printf("\tsubq $%d, %%rax\n", i * 8);
+    puts("\tpushq %rax");
 }
 
 void gen(node *n) {
     puts("");
     if (n->type == ND_NUM) {
-        printf("\tpush %d\n", n->value);
+        printf("\tpushq $%d\n", n->value);
         return;
     }
     if (n->type == ND_IDENT) {
         gen_lvalue(n);
-        puts("\tpop rax");
-        puts("\tmov rax, [rax]");
-        puts("\tpush rax");
+        puts("\tpopq %rax");
+        puts("\tmovq (%rax), %rax");
+        puts("\tpushq %rax");
         return;
     }
     if (n->type == '=') {
         gen_lvalue(n->lhs);
         gen(n->rhs);
-        puts("\tpop rdi");
-        puts("\tpop rax");
-        puts("\tmov [rax], rdi");
-        puts("\tpush rdi");
+        puts("\tpopq %rdi");
+        puts("\tpopq %rax");
+        puts("\tmovq %rdi, (%rax)");
+        puts("\tpushq %rdi");
         return;
     }
 
     gen(n->lhs);
     gen(n->rhs);
 
-    puts("\tpop rdi");
-    puts("\tpop rax");
+    puts("\tpopq %rdi");
+    puts("\tpopq %rax");
 
     switch (n->type) {
     case '+' :
-        puts("\tadd rax, rdi");
+        puts("\taddq %rdi, %rax");
         break;
     case '-' :
-        puts("\tsub rax, rdi");
+        puts("\tsubq %rdi, %rax");
         break;
     case '*' :
-        puts("\tmul rdi");
+        puts("\tmulq %rdi");
         break;
     case '/' :
-        puts("\tmov rdx, 0");
-        puts("\tdiv rdi");
+        puts("\tmovq $0, %rdx");
+        puts("\tdivq %rdi");
         break;
     }
-    printf("\tpush rax\n");
+    puts("\tpushq %rax");
 }
 
 void generate(char *input) {
     program(input);
     display();
 
-    puts(".intel_syntax noprefix");
     puts(".global main");
     puts("main:");
 
-    puts("\tpush rbp");
-    puts("\tmov rbp, rsp");
-    printf("\tsub rsp, %d\n", env->keys->size * 8);
+    puts("\tpushq %rbp");
+    puts("\tmovq %rsp, %rbp");
+    printf("\tsubq $%d, %%rsp\n", env->keys->size * 8);
 
     for (int i = 0; code[i] != NULL; i++) {
         gen(code[i]);
         puts("");
-        puts("\tpop rax");
+        puts("\tpopq %rax");
     }
 
-    puts("\tmov rsp, rbp");
-    puts("\tpop rbp");
+    puts("\tmovq %rbp, %rsp");
+    puts("\tpopq %rbp");
     puts("\tret");
 }
