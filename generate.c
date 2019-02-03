@@ -55,6 +55,10 @@ void gen(node *n) {
         puts("\tmovq $0, %rdx");
         puts("\tdivq %rdi");
         break;
+    case ND_EQ :
+        puts("\tcmpq %rdi, %rax");
+        puts("\tsete %al");
+        puts("\tmovzb %al, %rax");
     }
     puts("\tpushq %rax");
 }

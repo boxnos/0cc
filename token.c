@@ -19,10 +19,22 @@ void tokenize(char *p) {
             continue;
         }
 
-        if (*p == '+' || *p == '-' || *p == '*' || *p == '/' ||
-            *p == '(' || *p == ')' || *p == '=' || *p == ';') {
+        switch (*p) {
+        case '+' : case '-' : case '*' : case '/' :
+        case '(' : case ')' : case ';' :
             vector_push(tokens, (void *) new_token(*p, p));
             p++;
+            continue;
+        case '=':
+            p++;
+            if (*p == '=') {
+                vector_push(tokens, (void *) new_token(TK_EQ, p));
+                p++;
+            } else {
+                p--;
+                vector_push(tokens, (void *) new_token(*p, p));
+                p++;
+            }
             continue;
         }
         if (islower(*p)) {

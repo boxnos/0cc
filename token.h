@@ -1,4 +1,4 @@
-enum {TK_NUM, TK_IDENT, TK_EOF};
+enum {TK_NUM, TK_IDENT, TK_EQ, TK_NEQ, TK_EOF};
 
 typedef struct {
     int type;

@@ -79,8 +79,20 @@ node *add(int *pos) {
     }
 }
 
-node *assign(int *pos) {
+node *eq(int *pos) {
     node *n = add(pos);
+    for (;;) {
+        if (consume(TK_EQ, pos))
+            n = new_node(ND_EQ, n, add(pos));
+        else if (consume(TK_NEQ, pos))
+            n = new_node(ND_NEQ, n, add(pos));
+        else
+            return n;
+    }
+}
+
+node *assign(int *pos) {
+    node *n = eq(pos);
     if (consume('=', pos)) {
         map_put(env, n->string, (void *) (long) env->keys->size);
         return new_node('=', n, assign(pos));

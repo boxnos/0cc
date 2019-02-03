@@ -43,5 +43,6 @@ try 6 "a = z = 3 * 2;"
 try 7 "c = 2; b = 1; c * 3 + b;"
 try 7 "foo = 2; bar = 1; foo * 3 + bar;"
 try 6 "poo = 1; poop = poo + 2; hoge = 3; poop + hoge;"
+try 1 "1 == 1;"
 
 echo OK
