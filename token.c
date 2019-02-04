@@ -36,6 +36,14 @@ void tokenize(char *p) {
                 p++;
             }
             continue;
+        case '!':
+            p++;
+            if (*p == '=') {
+                vector_push(tokens, (void *) new_token(TK_NEQ, p));
+                p++;
+                continue;
+            } else
+                dump("=", p);
         }
         if (islower(*p)) {
             char tmp[256];

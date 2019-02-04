@@ -121,17 +121,27 @@ void program(char *s) {
 }
 
 void display_node(node *n) {
-    if (n->type == ND_NUM)
+    switch (n->type) {
+    case ND_NUM:
         fprintf(stderr, "%d", n->value);
-    else if (n->type == ND_IDENT) {
+        return;
+    case ND_IDENT:
         fprintf(stderr, "%s", n->string);
-    } else {
+        return;
+    case ND_EQ:
+        fprintf(stderr, "(%s ", "==");
+        break;
+    case ND_NEQ:
+        fprintf(stderr, "(%s ", "!=");
+        break;
+    default:
         fprintf(stderr, "(%c ", n->type);
-        display_node(n->lhs);
-        fprintf(stderr, " ");
-        display_node(n->rhs);
-        fprintf(stderr, ")");
+
     }
+    display_node(n->lhs);
+    fprintf(stderr, " ");
+    display_node(n->rhs);
+    fprintf(stderr, ")");
 }
 
 void display() {
