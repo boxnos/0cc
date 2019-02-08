@@ -25,6 +25,11 @@ void gen(node *n) {
         puts("\tpushq %rax");
         return;
     }
+    if (n->type == ND_CALL) {
+        printf("\tcall %s\n", n->lhs->string);
+        puts("pushq $0");
+        return;
+    }
     if (n->type == '=') {
         gen_lvalue(n->lhs);
         gen(n->rhs);
@@ -89,4 +94,12 @@ void generate(char *input) {
     puts("\tmovq %rbp, %rsp");
     puts("\tpopq %rbp");
     puts("\tret");
+
+    // for function call test
+    puts("hello:");
+    puts("mov $mes, %rdi");
+    puts("call puts");
+    puts("ret");
+    puts("mes:");
+    puts(".string \"Hello, world!\"");
 }

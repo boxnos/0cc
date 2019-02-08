@@ -100,8 +100,22 @@ node *assign(int *pos) {
     return n;
 }
 
+node *function(int *pos) {
+    if (consume(TK_IDENT, pos)) {
+        char *str = get_token((*pos) - 1)->string;
+        if(consume('(', pos)) {
+            if (consume(')', pos)) {
+                return new_node(ND_CALL, new_ident(str), NULL);
+            }else
+                dump(")", get_token(*pos)->input);
+        } else
+            (*pos)--;
+    }
+    return assign(pos);
+}
+
 node *statement(int *pos) {
-    node *n = assign(pos);
+    node *n = function(pos);
     if (!consume(';', pos))
         dump(";", get_token(*pos)->input);
     return n;
@@ -127,6 +141,11 @@ void display_node(node *n) {
         return;
     case ND_IDENT:
         fprintf(stderr, "%s", n->string);
+        return;
+    case ND_CALL:
+        fprintf(stderr, "(");
+        display_node(n->lhs);
+        fprintf(stderr, ")");
         return;
     case ND_EQ:
         fprintf(stderr, "(%s ", "==");

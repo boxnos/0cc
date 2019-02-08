@@ -1,4 +1,4 @@
-enum {ND_NUM, ND_IDENT, ND_EQ, ND_NEQ};
+enum {ND_NUM, ND_IDENT, ND_CALL, ND_EQ, ND_NEQ};
 
 typedef struct node {
     int type;

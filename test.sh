@@ -45,5 +45,6 @@ try 7 "foo = 2; bar = 1; foo * 3 + bar;"
 try 6 "poo = 1; poop = poo + 2; hoge = 3; poop + hoge;"
 try 1 "1 == 1;"
 try 0 "1 != 1;"
+try 0 "hello(); hello(); 0;"
 
 echo OK
